@@ -1,6 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Wills project code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include <SoftwareSerial.h>
+SoftwareSerial ipodSerial(4,3); // Rx, Tx
+#define DEBUGGING 1
+
 const int ledPin =  2;      // the number of the LED pin
  
 // the follow variables is a long because the time, measured in miliseconds,
@@ -25,7 +29,7 @@ void send_bytes(byte *bytes)
 {
     for(int m=0; m<7; m++)
     {
-                Serial.write(bytes[m]);//sends the command
+                ipodSerial.write(bytes[m]);//sends the command
     }
 }
  
@@ -33,6 +37,8 @@ void setup() {
   // set the digital pin as output:
   pinMode(ledPin, OUTPUT);      
   Serial.begin(19200);
+  ipodSerial.begin(19200);
+  
   send_bytes((byte *)mode2);
 }
  
@@ -63,7 +69,9 @@ void loop()
     // save the last time you told the ipod to be controlled
     previousMillis = currentMillis;   
     // once per second send a request command -- you might need to remove the //s
-    // send_bytes(mode2);
+    send_bytes((byte *)mode2);
+    //sent_release = 1;
+    //send_bytes((byte *)nobutton);
   }
   
   backgroundValue = 0;
@@ -77,19 +85,22 @@ void loop()
     delay(10); 
     foregroundValue += analogRead(analogInPin);
   }
+  #ifdef DEBUGGING
   Serial.print("fg = " );                       
   Serial.print(foregroundValue);      
   Serial.print("\t bg = ");      
   Serial.print(backgroundValue);
- 
-  if (foregroundValue > backgroundValue+4)
+   #endif
+  if (foregroundValue > backgroundValue+10)
   {
     if (!sent_press)
     {
       sent_press = 1;
       sent_release = 0;
       send_command(playxpause); // could put other values - look above where playxpause is
-  Serial.print(" Hand");
+      #ifdef DEBUGGING
+      Serial.print(" Hand");
+      #endif
     }
   }
   else
@@ -99,9 +110,14 @@ void loop()
       sent_press = 0;
       sent_release = 1;
       send_bytes((byte *)nobutton);
-  Serial.print(" No Hand");
-  }}
+      #ifdef DEBUGGING
+      Serial.print(" No Hand");
+      #endif
+    }
+  }
+  #ifdef DEBUGGING
   Serial.println();
+  #endif
   
   delay(50);
 }
