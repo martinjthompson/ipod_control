@@ -40,6 +40,7 @@ void setup() {
   ipodSerial.begin(19200);
   
   send_bytes((byte *)mode2);
+Serial.print("Starting");  
 }
  
 // some values which can be used with the send_command function to send commands
