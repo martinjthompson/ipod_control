@@ -15,7 +15,11 @@ long interval = 1000;           // interval at which to blink (milliseconds)
 const int analogInPin = A0;
 int backgroundValue = 0; 
 int foregroundValue = 0; 
- 
+const int threshold_hand = 80; // difference between foreground and background when hand is there.
+const int threshold_nohand = 50; // difference between foreground and background when hand is there.
+
+
+
 // These two are used to make sure we only send the command once when the hand is held 
 // in front of the sensor
 int sent_press = 0;
@@ -34,6 +38,7 @@ void send_bytes(byte *bytes)
 }
  
 void setup() {
+  
   // set the digital pin as output:
   pinMode(ledPin, OUTPUT);      
   Serial.begin(19200);
@@ -65,7 +70,8 @@ void loop()
   // the LED is bigger than the interval at which you want to 
   // blink the LED.
   unsigned long currentMillis = millis();
- 
+  static 
+  float filtered = 0.0; 
   if(currentMillis - previousMillis > interval) {
     // save the last time you told the ipod to be controlled
     previousMillis = currentMillis;   
@@ -77,24 +83,40 @@ void loop()
   
   backgroundValue = 0;
   foregroundValue = 0;
-  for (int i=0;i<4;i++)
+  for (int i=0;i<64;i++)
   {
     digitalWrite(ledPin, HIGH);
-    delay(10); 
+    delay(2); 
     backgroundValue += analogRead(analogInPin);
     digitalWrite(ledPin, LOW);
-    delay(10); 
+    delay(2
+    ); 
     foregroundValue += analogRead(analogInPin);
+  }
+  
+  signed delta = foregroundValue-backgroundValue;
+  if (filtered == 0.0)
+  {
+    filtered = delta;
+  }
+  else
+  {
+    const float alpha = 0.2f;
+    filtered = alpha*filtered + (1.0f-alpha)*delta;
   }
   #ifdef DEBUGGING
   Serial.print("fg = " );                       
   Serial.print(foregroundValue);      
   Serial.print("\t bg = ");      
   Serial.print(backgroundValue);
-   #endif
-  if (foregroundValue > backgroundValue+10)
+  Serial.print("\t delta= ");
+  Serial.print(delta);
+  Serial.print(" filtered = ");
+ Serial.print(filtered);
+
+ #endif
   {
-    if (!sent_press)
+    if (!sent_press && (filtered > threshold_hand))
     {
       sent_press = 1;
       sent_release = 0;
@@ -104,9 +126,9 @@ void loop()
       #endif
     }
   }
-  else
   {
-    if (!sent_release)
+    if (!sent_release && (filtered < threshold_nohand))
+
     {
       sent_press = 0;
       sent_release = 1;
